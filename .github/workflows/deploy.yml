@@ -1,11 +1,8 @@
-# Git Action - CI/CD
-# 프로젝트 빌드 → aws 인증 → AWS 로그인 → ECR 도커 이미지 업로드
-
 name: Deploy to AWS
 
 on:
   push:
-    branches: [ main ]  # 코드를 main blanch에 푸쉬될때 마다
+    branches: [ main ]
 
 env:
   AWS_REGION: ap-northeast-2
@@ -13,7 +10,7 @@ env:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # 우분투 환경
+    runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v2
@@ -27,14 +24,14 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew build
     
-    - name: Configure AWS credentials # AWS access 키 설정
+    - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
     
-    - name: Login to Amazon ECR # 도커 컨테이너 이미지 저장
+    - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
     
@@ -45,7 +42,7 @@ jobs:
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} . 
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
     
-    - name: Deploy to EC2 using SSM # ec2에 명령어(도커 컨테이너 중단, 이미지 제거, 새로운 이미지 생성)
+    - name: Deploy to EC2 using SSM
       env:
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       run: |
