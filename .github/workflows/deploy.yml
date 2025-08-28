@@ -1,5 +1,6 @@
 name: Deploy to AWS
 
+# 해당 Branch에 변경이 발생하면 실행
 on:
   push:
     branches: [ main ]
@@ -14,34 +15,35 @@ jobs:
     
     steps:
     - uses: actions/checkout@v2
-    
+    # JDK 17 버전 설정
     - name: Set up JDK 17
       uses: actions/setup-java@v2
       with:
         java-version: '17'
         distribution: 'adopt'
-    
+    # 프로젝트 빌드
     - name: Build with Gradle
       run: ./gradlew build
-    
+    # Access key 환경변수를 이용하여 GitHub Actions가 AWS와 연동
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
-    
+    # AWS ECR에 로그인
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
-    
+    # Docker 이미지를 빌드하고, 현재 GitHub 커밋 SHA 값을 태그로 추가하여 ECR에 업로드
     - name: Build and push Docker image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
-    
+    # SSM(AWS Systems Manager) 명령을 이용해 EC2에서 컨테이너 실행 - 기존컨테이너 중지, 삭제 - 새로운 컨테이너 실행
+    # 실행 시 환경 변수(SPRING_DATASOURCE_URL, SPRING_DATASOURCE_PASSWORD 등)를 함께 설정
     - name: Deploy to EC2 using SSM
       env:
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
